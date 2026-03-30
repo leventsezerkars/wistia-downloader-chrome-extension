@@ -117,6 +117,9 @@ function parseJsonLdEntries() {
 
 function collectCandidateTitles() {
   const selectors = [
+    '.track__title',
+    '[class="track__title"]',
+    '[class*="track__title"]',
     'meta[property="og:title"]',
     'meta[name="twitter:title"]',
     'meta[name="title"]',
@@ -203,6 +206,78 @@ function inferTitleFromDomForUrl(url, fallbackTitle) {
         tokenNode.getAttribute('data-title'),
         tokenNode.getAttribute('aria-label'),
         tokenNode.getAttribute('title'),
+        tokenNode.closest('.track, .track__item, li, article, section, div')?.querySelector('.track__title')?.textContent,
+        tokenNode.closest('article, section, div')?.querySelector('h1, h2, h3, [class*="title" i], [id*="title" i]')?.textContent,
+        tokenNode.textContent
+      ];
+
+      for (const candidate of candidates) {
+        const clean = sanitizeTitle(candidate || '');
+        if (clean) {
+          return clean;
+        }
+      }
+    }
+  } catch (error) {
+    // ignore malformed URL parsing
+  }
+
+  return fallbackTitle;
+}
+
+function inferTitleFromTrackNodes(url, fallbackTitle) {
+  const trackTitleNodes = Array.from(document.querySelectorAll('.track__title, [class*="track__title"]'));
+  if (!trackTitleNodes.length) {
+    return fallbackTitle;
+  }
+
+  for (const titleNode of trackTitleNodes) {
+    const parent = titleNode.closest('.track, .track__item, li, article, section, div') || titleNode.parentElement;
+    if (!parent) {
+      continue;
+    }
+
+    const parentHtml = parent.innerHTML || '';
+    if (!parentHtml.includes(url)) {
+      continue;
+    }
+
+    const clean = sanitizeTitle(titleNode.textContent || titleNode.getAttribute('title') || '');
+    if (clean) {
+      return clean;
+    }
+  }
+
+  return fallbackTitle;
+}
+
+function inferTitleFromDomForUrl(url, fallbackTitle) {
+  try {
+    const parsed = new URL(url);
+    const urlTokens = [
+      parsed.pathname.split('/').filter(Boolean).pop(),
+      parsed.searchParams.get('videoFoamId'),
+      parsed.searchParams.get('media_id')
+    ]
+      .map((token) => String(token || '').trim())
+      .filter(Boolean);
+
+    for (const token of urlTokens) {
+      const escapedToken = CSS.escape(token);
+      const tokenNode =
+        document.querySelector(`[data-wistia-id="${escapedToken}"]`) ||
+        document.querySelector(`[data-video-id="${escapedToken}"]`) ||
+        document.querySelector(`[id*="${escapedToken}"]`) ||
+        document.querySelector(`[class*="${escapedToken}"]`);
+
+      if (!tokenNode) {
+        continue;
+      }
+
+      const candidates = [
+        tokenNode.getAttribute('data-title'),
+        tokenNode.getAttribute('aria-label'),
+        tokenNode.getAttribute('title'),
         tokenNode.closest('article, section, div')?.querySelector('h1, h2, h3, [class*="title" i], [id*="title" i]')?.textContent,
         tokenNode.textContent
       ];
@@ -226,6 +301,10 @@ function collectEntriesFromSourceText(fullText, fallbackTitle) {
   return urls.map((url) => {
     const byText = inferTitleNearUrl(fullText, url, fallbackTitle);
     const byDom = inferTitleFromDomForUrl(url, byText);
+    const byTrack = inferTitleFromTrackNodes(url, byDom);
+    return {
+      url,
+      title: sanitizeTitle(byTrack || byDom || byText || fallbackTitle)
     return {
       url,
       title: sanitizeTitle(byDom || byText || fallbackTitle)
