@@ -91,4 +91,14 @@ button.danger {
   color: #55657a;
   margin-left: 1px;
   word-break: break-word;
+  word-break: break-all;
+}
+
+#urlList a {
+  color: #0b57d0;
+  text-decoration: none;
+}
+
+#urlList a:hover {
+  text-decoration: underline;
 }

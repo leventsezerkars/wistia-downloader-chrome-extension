@@ -45,6 +45,7 @@ function normalizeTitle(rawTitle) {
 }
 
 async function addEntryToTab(tabId, rawUrl, rawTitle = '') {
+async function addUrlToTab(tabId, rawUrl) {
   if (typeof tabId !== 'number' || tabId < 0) {
     return;
   }
@@ -70,12 +71,22 @@ async function addEntryToTab(tabId, rawUrl, rawTitle = '') {
 
   existing.push({ url, title });
   map[tabId] = existing;
+  const normalized = normalizeCandidate(rawUrl);
+  if (!normalized) {
+    return;
+  }
+
+  const map = await getTabMap();
+  const existing = new Set(map[tabId] || []);
+  existing.add(normalized);
+  map[tabId] = [...existing];
   await saveTabMap(map);
 }
 
 chrome.webRequest.onCompleted.addListener(
   (details) => {
     addEntryToTab(details.tabId, details.url);
+    addUrlToTab(details.tabId, details.url);
   },
   { urls: ['<all_urls>'] }
 );
@@ -92,6 +103,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       : (Array.isArray(message.urls) ? message.urls.map((url) => ({ url, title: '' })) : []);
 
     Promise.all(entries.map((entry) => addEntryToTab(tabId, entry?.url, entry?.title || ''))).then(() => {
+    const urls = Array.isArray(message.urls) ? message.urls : [];
+    Promise.all(urls.map((url) => addUrlToTab(tabId, url))).then(() => {
       sendResponse({ ok: true });
     });
     return true;
