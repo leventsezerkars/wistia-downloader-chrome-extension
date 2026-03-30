@@ -143,8 +143,52 @@ async function loadUrls() {
   applyFilterAndRender();
 }
 
+function isInjectableUrl(tabUrl) {
+  if (!tabUrl) {
+    return false;
+  }
+  try {
+    const u = new URL(tabUrl);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch (e) {
+    return false;
+  }
+}
+
+async function rescanActiveTabAndReload() {
+  const tabId = await getActiveTabId();
+  if (!tabId) {
+    statusEl.textContent = 'Aktif sekme bulunamadı.';
+    allEntries = [];
+    renderEntries([]);
+    return;
+  }
+
+  refreshBtn.disabled = true;
+  statusEl.textContent = 'Sayfa yeniden taranıyor...';
+
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (!isInjectableUrl(tab.url)) {
+      statusEl.textContent = 'Bu sekmede tarama yapılamaz (sadece http/https).';
+    } else {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['content.js']
+      });
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+  } catch (error) {
+    statusEl.textContent =
+      'Tarama tetiklenemedi. Sayfayı tam yenileyin veya izinleri kontrol edin.';
+  } finally {
+    await loadUrls();
+    refreshBtn.disabled = false;
+  }
+}
+
 refreshBtn.addEventListener('click', () => {
-  loadUrls();
+  rescanActiveTabAndReload();
 });
 
 clearBtn.addEventListener('click', async () => {
@@ -162,6 +206,13 @@ clearBtn.addEventListener('click', async () => {
 
 searchInput.addEventListener('input', () => {
   applyFilterAndRender();
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local' || !changes.tabUrls) {
+    return;
+  }
+  loadUrls();
 });
 
 loadUrls();

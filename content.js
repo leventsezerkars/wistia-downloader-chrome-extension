@@ -182,13 +182,27 @@ function inferTitleNearUrl(text, url, fallbackTitle) {
 function inferTitleFromDomForUrl(url, fallbackTitle) {
   try {
     const parsed = new URL(url);
-    const urlTokens = [
+    const rawTokens = [
       parsed.pathname.split('/').filter(Boolean).pop(),
       parsed.searchParams.get('videoFoamId'),
       parsed.searchParams.get('media_id')
     ]
       .map((token) => String(token || '').trim())
       .filter(Boolean);
+
+    const urlTokens = [];
+    const tokenSeen = new Set();
+    for (const token of rawTokens) {
+      if (token && !tokenSeen.has(token)) {
+        tokenSeen.add(token);
+        urlTokens.push(token);
+      }
+      const withoutM3u8 = token.replace(/\.m3u8$/i, '');
+      if (withoutM3u8 && withoutM3u8 !== token && !tokenSeen.has(withoutM3u8)) {
+        tokenSeen.add(withoutM3u8);
+        urlTokens.push(withoutM3u8);
+      }
+    }
 
     for (const token of urlTokens) {
       const escapedToken = CSS.escape(token);
@@ -251,51 +265,6 @@ function inferTitleFromTrackNodes(url, fallbackTitle) {
   return fallbackTitle;
 }
 
-function inferTitleFromDomForUrl(url, fallbackTitle) {
-  try {
-    const parsed = new URL(url);
-    const urlTokens = [
-      parsed.pathname.split('/').filter(Boolean).pop(),
-      parsed.searchParams.get('videoFoamId'),
-      parsed.searchParams.get('media_id')
-    ]
-      .map((token) => String(token || '').trim())
-      .filter(Boolean);
-
-    for (const token of urlTokens) {
-      const escapedToken = CSS.escape(token);
-      const tokenNode =
-        document.querySelector(`[data-wistia-id="${escapedToken}"]`) ||
-        document.querySelector(`[data-video-id="${escapedToken}"]`) ||
-        document.querySelector(`[id*="${escapedToken}"]`) ||
-        document.querySelector(`[class*="${escapedToken}"]`);
-
-      if (!tokenNode) {
-        continue;
-      }
-
-      const candidates = [
-        tokenNode.getAttribute('data-title'),
-        tokenNode.getAttribute('aria-label'),
-        tokenNode.getAttribute('title'),
-        tokenNode.closest('article, section, div')?.querySelector('h1, h2, h3, [class*="title" i], [id*="title" i]')?.textContent,
-        tokenNode.textContent
-      ];
-
-      for (const candidate of candidates) {
-        const clean = sanitizeTitle(candidate || '');
-        if (clean) {
-          return clean;
-        }
-      }
-    }
-  } catch (error) {
-    // ignore malformed URL parsing
-  }
-
-  return fallbackTitle;
-}
-
 function collectEntriesFromSourceText(fullText, fallbackTitle) {
   const urls = extractUrlsFromText(fullText);
   return urls.map((url) => {
@@ -305,9 +274,6 @@ function collectEntriesFromSourceText(fullText, fallbackTitle) {
     return {
       url,
       title: sanitizeTitle(byTrack || byDom || byText || fallbackTitle)
-    return {
-      url,
-      title: sanitizeTitle(byDom || byText || fallbackTitle)
     };
   });
 }

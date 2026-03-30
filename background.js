@@ -77,6 +77,23 @@ chrome.webRequest.onCompleted.addListener(
   { urls: ['<all_urls>'] }
 );
 
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.status !== 'loading') {
+    return;
+  }
+  if (typeof tabId !== 'number' || tabId < 0) {
+    return;
+  }
+
+  getTabMap().then(async (map) => {
+    if (!map[tabId]) {
+      return;
+    }
+    delete map[tabId];
+    await saveTabMap(map);
+  });
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !message.type) {
     return;
