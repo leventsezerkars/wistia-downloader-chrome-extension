@@ -57,6 +57,31 @@ button.danger {
   border: 1px solid #dbe6f8;
   border-radius: 6px;
   padding: 8px;
+}
+
+.url-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.url-row a {
+  color: #0b57d0;
+  text-decoration: none;
+  word-break: break-all;
+  flex: 1;
+}
+
+.url-row a:hover {
+  text-decoration: underline;
+}
+
+.copy-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 11px;
+  padding: 4px 8px;
+}
   word-break: break-all;
 }
 

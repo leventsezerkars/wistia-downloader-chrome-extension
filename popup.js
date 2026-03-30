@@ -8,6 +8,21 @@ async function getActiveTabId() {
   return tabs[0]?.id;
 }
 
+async function copyToClipboard(text, button) {
+  try {
+    await navigator.clipboard.writeText(text);
+    const original = button.textContent;
+    button.textContent = 'Kopyalandı';
+    button.disabled = true;
+    setTimeout(() => {
+      button.textContent = original;
+      button.disabled = false;
+    }, 1200);
+  } catch (error) {
+    statusEl.textContent = 'Kopyalama başarısız oldu.';
+  }
+}
+
 function renderUrls(urls) {
   urlListEl.innerHTML = '';
 
@@ -20,11 +35,25 @@ function renderUrls(urls) {
 
   urls.forEach((url) => {
     const item = document.createElement('li');
+    const row = document.createElement('div');
+    row.className = 'url-row';
+
     const link = document.createElement('a');
     link.href = url;
     link.textContent = url;
     link.target = '_blank';
     link.rel = 'noreferrer noopener';
+
+    const copyButton = document.createElement('button');
+    copyButton.textContent = 'Kopyala';
+    copyButton.className = 'copy-btn';
+    copyButton.addEventListener('click', () => {
+      copyToClipboard(url, copyButton);
+    });
+
+    row.appendChild(link);
+    row.appendChild(copyButton);
+    item.appendChild(row);
     item.appendChild(link);
     urlListEl.appendChild(item);
   });
