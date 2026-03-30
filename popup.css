@@ -82,3 +82,14 @@ button.danger {
   font-size: 11px;
   padding: 4px 8px;
 }
+  word-break: break-all;
+}
+
+#urlList a {
+  color: #0b57d0;
+  text-decoration: none;
+}
+
+#urlList a:hover {
+  text-decoration: underline;
+}

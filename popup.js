@@ -54,6 +54,7 @@ function renderUrls(urls) {
     row.appendChild(link);
     row.appendChild(copyButton);
     item.appendChild(row);
+    item.appendChild(link);
     urlListEl.appendChild(item);
   });
 }

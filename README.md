@@ -41,3 +41,15 @@ Kod değişikliği yaptıktan sonra:
 1. `chrome://extensions` sayfasına dön.
 2. Eklentinin kartındaki **Reload** butonuna tıkla.
 3. Test sayfasını yenileyip popup'ı yeniden aç.
+## Kurulum
+
+1. Bu klasörü indir.
+2. Chrome'da `chrome://extensions` sayfasını aç.
+3. **Developer mode** aç.
+4. **Load unpacked** ile bu klasörü seç.
+
+## Kullanım
+
+1. Wistia video içeren bir sayfaya git.
+2. Extension ikonuna tıkla.
+3. Bulunan URL'ler listede görünür.
