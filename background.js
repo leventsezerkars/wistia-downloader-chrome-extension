@@ -86,11 +86,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const tabId = sender?.tab?.id;
     const entries = Array.isArray(message.entries)
       ? message.entries
-      : (Array.isArray(message.urls) ? message.urls.map((url) => ({ url, title: '' })) : []);
+      : Array.isArray(message.urls)
+        ? message.urls.map((url) => ({ url, title: '' }))
+        : [];
 
     Promise.all(entries.map((entry) => addEntryToTab(tabId, entry?.url, entry?.title || ''))).then(() => {
       sendResponse({ ok: true });
     });
+
     return true;
   }
 

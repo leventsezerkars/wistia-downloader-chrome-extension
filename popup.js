@@ -2,25 +2,14 @@ const urlListEl = document.getElementById('urlList');
 const statusEl = document.getElementById('status');
 const refreshBtn = document.getElementById('refreshBtn');
 const clearBtn = document.getElementById('clearBtn');
+const searchInput = document.getElementById('searchInput');
+const countBadge = document.getElementById('countBadge');
+
+let allEntries = [];
 
 async function getActiveTabId() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   return tabs[0]?.id;
-}
-
-async function copyToClipboard(text, button) {
-  try {
-    await navigator.clipboard.writeText(text);
-    const original = button.textContent;
-    button.textContent = 'Kopyalandı';
-    button.disabled = true;
-    setTimeout(() => {
-      button.textContent = original;
-      button.disabled = false;
-    }, 1200);
-  } catch (error) {
-    statusEl.textContent = 'Kopyalama başarısız oldu.';
-  }
 }
 
 function normalizeEntries(rawUrls) {
@@ -36,8 +25,8 @@ function normalizeEntries(rawUrls) {
 
       if (item && typeof item === 'object') {
         return {
-          url: item.url || '',
-          title: item.title || ''
+          url: String(item.url || '').trim(),
+          title: String(item.title || '').trim()
         };
       }
 
@@ -46,15 +35,21 @@ function normalizeEntries(rawUrls) {
     .filter((item) => item && item.url);
 }
 
-function renderUrls(entries) {
-  urlListEl.innerHTML = '';
+function updateCountBadge(count) {
+  countBadge.textContent = `${count} URL`;
+}
 
   if (!entries.length) {
     statusEl.textContent = 'Wistia m3u8 URL bulunamadı.';
+    urlListEl.appendChild(createEmptyRow('Henüz bağlantı bulunamadı. Sayfayı yenileyip tekrar deneyin.'));
     return;
   }
 
-  statusEl.textContent = `${entries.length} adet URL bulundu.`;
+  if (!entries.length) {
+    statusEl.textContent = 'Arama kriterine uygun sonuç bulunamadı.';
+    urlListEl.appendChild(createEmptyRow('Filtreye uyan kayıt yok. Aramayı temizleyin.'));
+    return;
+  }
 
   entries.forEach((entry) => {
     const item = document.createElement('li');
@@ -80,20 +75,27 @@ function renderUrls(entries) {
     item.appendChild(row);
 
     if (entry.title) {
-      const small = document.createElement('small');
-      small.className = 'url-title';
-      small.textContent = entry.title;
-      item.appendChild(small);
+      const title = document.createElement('small');
+      title.className = 'url-title';
+      title.textContent = entry.title;
+      item.appendChild(title);
     }
 
     urlListEl.appendChild(item);
   });
 }
 
+function applyFilterAndRender() {
+  const filtered = filterEntries();
+  renderEntries(filtered, allEntries.length);
+}
+
 async function loadUrls() {
   const tabId = await getActiveTabId();
   if (!tabId) {
     statusEl.textContent = 'Aktif sekme bulunamadı.';
+    allEntries = [];
+    renderEntries([]);
     return;
   }
 
@@ -114,7 +116,13 @@ clearBtn.addEventListener('click', async () => {
   }
 
   await chrome.runtime.sendMessage({ type: 'CLEAR_URLS', tabId });
-  renderUrls([]);
+  allEntries = [];
+  searchInput.value = '';
+  renderEntries([]);
+});
+
+searchInput.addEventListener('input', () => {
+  applyFilterAndRender();
 });
 
 loadUrls();
