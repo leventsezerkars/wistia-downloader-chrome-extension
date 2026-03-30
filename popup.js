@@ -50,10 +50,6 @@ function renderUrls(entries) {
   urlListEl.innerHTML = '';
 
   if (!entries.length) {
-function renderUrls(urls) {
-  urlListEl.innerHTML = '';
-
-  if (!urls.length) {
     statusEl.textContent = 'Wistia m3u8 URL bulunamadı.';
     return;
   }
@@ -61,18 +57,14 @@ function renderUrls(urls) {
   statusEl.textContent = `${entries.length} adet URL bulundu.`;
 
   entries.forEach((entry) => {
-  statusEl.textContent = `${urls.length} adet URL bulundu.`;
-
-  urls.forEach((url) => {
     const item = document.createElement('li');
+
     const row = document.createElement('div');
     row.className = 'url-row';
 
     const link = document.createElement('a');
     link.href = entry.url;
     link.textContent = entry.url;
-    link.href = url;
-    link.textContent = url;
     link.target = '_blank';
     link.rel = 'noreferrer noopener';
 
@@ -81,7 +73,6 @@ function renderUrls(urls) {
     copyButton.className = 'copy-btn';
     copyButton.addEventListener('click', () => {
       copyToClipboard(entry.url, copyButton);
-      copyToClipboard(url, copyButton);
     });
 
     row.appendChild(link);
@@ -95,7 +86,6 @@ function renderUrls(urls) {
       item.appendChild(small);
     }
 
-    item.appendChild(link);
     urlListEl.appendChild(item);
   });
 }
@@ -110,8 +100,6 @@ async function loadUrls() {
   const result = await chrome.runtime.sendMessage({ type: 'GET_URLS', tabId });
   const entries = normalizeEntries(result?.urls);
   renderUrls(entries);
-  const urls = Array.isArray(result?.urls) ? result.urls : [];
-  renderUrls(urls);
 }
 
 refreshBtn.addEventListener('click', () => {
