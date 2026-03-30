@@ -7,13 +7,29 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <main>
-      <h1>Wistia M3U8 URL Listesi</h1>
-      <div class="actions">
-        <button id="refreshBtn">Yenile</button>
-        <button id="clearBtn" class="danger">Temizle</button>
-      </div>
-      <p id="status"></p>
+    <main class="panel">
+      <header class="panel-header">
+        <div>
+          <h1>Wistia M3U8 URL Listesi</h1>
+          <p class="subtitle">Aktif sekmedeki akış bağlantılarını hızlıca görüntüleyin.</p>
+        </div>
+        <span id="countBadge" class="count-badge" aria-live="polite">0 URL</span>
+      </header>
+
+      <section class="toolbar" aria-label="Araçlar">
+        <input
+          id="searchInput"
+          type="search"
+          placeholder="URL veya başlık içinde ara..."
+          aria-label="Liste içinde ara"
+        />
+        <div class="actions">
+          <button id="refreshBtn" class="primary">Yenile</button>
+          <button id="clearBtn" class="danger">Temizle</button>
+        </div>
+      </section>
+
+      <p id="status" role="status" aria-live="polite"></p>
       <ul id="urlList"></ul>
     </main>
     <script src="popup.js"></script>
