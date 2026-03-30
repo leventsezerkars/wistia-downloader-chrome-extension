@@ -99,7 +99,6 @@ function collectPotentialSources() {
   const mediaEls = Array.from(document.querySelectorAll('video, source'));
   mediaEls.forEach((mediaEl) => {
     const src = mediaEl.getAttribute('src') || mediaEl.currentSrc;
-    const src = mediaEl.getAttribute('src');
     if (src) {
       sourceParts.push(src);
     }
@@ -143,11 +142,5 @@ if (foundEntries.length) {
   chrome.runtime.sendMessage({
     type: 'REPORT_FOUND_URLS',
     entries: foundEntries
-const found = extractUrlsFromText(collectPotentialSources());
-
-if (found.length) {
-  chrome.runtime.sendMessage({
-    type: 'REPORT_FOUND_URLS',
-    urls: found
   });
 }
