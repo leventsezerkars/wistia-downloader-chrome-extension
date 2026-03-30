@@ -57,6 +57,9 @@ button.danger {
   border: 1px solid #dbe6f8;
   border-radius: 6px;
   padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .url-row {
@@ -82,6 +85,12 @@ button.danger {
   font-size: 11px;
   padding: 4px 8px;
 }
+
+.url-title {
+  font-size: 11px;
+  color: #55657a;
+  margin-left: 1px;
+  word-break: break-word;
   word-break: break-all;
 }
 

@@ -23,6 +23,33 @@ async function copyToClipboard(text, button) {
   }
 }
 
+function normalizeEntries(rawUrls) {
+  if (!Array.isArray(rawUrls)) {
+    return [];
+  }
+
+  return rawUrls
+    .map((item) => {
+      if (typeof item === 'string') {
+        return { url: item, title: '' };
+      }
+
+      if (item && typeof item === 'object') {
+        return {
+          url: item.url || '',
+          title: item.title || ''
+        };
+      }
+
+      return null;
+    })
+    .filter((item) => item && item.url);
+}
+
+function renderUrls(entries) {
+  urlListEl.innerHTML = '';
+
+  if (!entries.length) {
 function renderUrls(urls) {
   urlListEl.innerHTML = '';
 
@@ -31,6 +58,9 @@ function renderUrls(urls) {
     return;
   }
 
+  statusEl.textContent = `${entries.length} adet URL bulundu.`;
+
+  entries.forEach((entry) => {
   statusEl.textContent = `${urls.length} adet URL bulundu.`;
 
   urls.forEach((url) => {
@@ -39,6 +69,8 @@ function renderUrls(urls) {
     row.className = 'url-row';
 
     const link = document.createElement('a');
+    link.href = entry.url;
+    link.textContent = entry.url;
     link.href = url;
     link.textContent = url;
     link.target = '_blank';
@@ -48,12 +80,21 @@ function renderUrls(urls) {
     copyButton.textContent = 'Kopyala';
     copyButton.className = 'copy-btn';
     copyButton.addEventListener('click', () => {
+      copyToClipboard(entry.url, copyButton);
       copyToClipboard(url, copyButton);
     });
 
     row.appendChild(link);
     row.appendChild(copyButton);
     item.appendChild(row);
+
+    if (entry.title) {
+      const small = document.createElement('small');
+      small.className = 'url-title';
+      small.textContent = entry.title;
+      item.appendChild(small);
+    }
+
     item.appendChild(link);
     urlListEl.appendChild(item);
   });
@@ -67,6 +108,8 @@ async function loadUrls() {
   }
 
   const result = await chrome.runtime.sendMessage({ type: 'GET_URLS', tabId });
+  const entries = normalizeEntries(result?.urls);
+  renderUrls(entries);
   const urls = Array.isArray(result?.urls) ? result.urls : [];
   renderUrls(urls);
 }
