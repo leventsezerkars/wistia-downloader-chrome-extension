@@ -1,0 +1,94 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  min-width: 460px;
+  max-width: 520px;
+}
+
+main {
+  padding: 12px;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+button {
+  border: 1px solid #d0d0d0;
+  background: #f9f9f9;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+button.danger {
+  border-color: #f3a7a7;
+  color: #9a0000;
+}
+
+#status {
+  margin: 0 0 8px;
+  color: #555;
+  font-size: 12px;
+}
+
+#urlList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+#urlList li {
+  font-size: 12px;
+  line-height: 1.35;
+  background: #f3f6fb;
+  border: 1px solid #dbe6f8;
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.url-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.url-row a {
+  color: #0b57d0;
+  text-decoration: none;
+  word-break: break-all;
+  flex: 1;
+}
+
+.url-row a:hover {
+  text-decoration: underline;
+}
+
+.copy-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.url-title {
+  font-size: 11px;
+  color: #55657a;
+  margin-left: 1px;
+  word-break: break-word;
+}

@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Wistia M3U8 Finder",
+  "version": "1.0.0",
+  "description": "Aktif sekmedeki Wistia m3u8 bağlantılarını bulur ve listeler.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Wistia M3U8 Finder",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
