@@ -39,44 +39,7 @@ function updateCountBadge(count) {
   countBadge.textContent = `${count} URL`;
 }
 
-function createEmptyRow(message) {
-  const item = document.createElement('li');
-  item.className = 'empty-state';
-  item.textContent = message;
-  return item;
-}
-
-async function copyToClipboard(text, button) {
-  try {
-    await navigator.clipboard.writeText(text);
-    const original = button.textContent;
-    button.textContent = 'Kopyalandı';
-    button.disabled = true;
-    setTimeout(() => {
-      button.textContent = original;
-      button.disabled = false;
-    }, 1200);
-  } catch (error) {
-    statusEl.textContent = 'Kopyalama başarısız oldu.';
-  }
-}
-
-function filterEntries() {
-  const query = searchInput.value.trim().toLowerCase();
-  if (!query) {
-    return allEntries;
-  }
-
-  return allEntries.filter((entry) => {
-    return entry.url.toLowerCase().includes(query) || entry.title.toLowerCase().includes(query);
-  });
-}
-
-function renderEntries(entries, totalCount = entries.length) {
-  urlListEl.innerHTML = '';
-  updateCountBadge(totalCount);
-
-  if (!totalCount) {
+  if (!entries.length) {
     statusEl.textContent = 'Wistia m3u8 URL bulunamadı.';
     urlListEl.appendChild(createEmptyRow('Henüz bağlantı bulunamadı. Sayfayı yenileyip tekrar deneyin.'));
     return;
@@ -87,8 +50,6 @@ function renderEntries(entries, totalCount = entries.length) {
     urlListEl.appendChild(createEmptyRow('Filtreye uyan kayıt yok. Aramayı temizleyin.'));
     return;
   }
-
-  statusEl.textContent = `${entries.length}/${totalCount} URL gösteriliyor.`;
 
   entries.forEach((entry) => {
     const item = document.createElement('li');
@@ -105,7 +66,9 @@ function renderEntries(entries, totalCount = entries.length) {
     const copyButton = document.createElement('button');
     copyButton.textContent = 'Kopyala';
     copyButton.className = 'copy-btn';
-    copyButton.addEventListener('click', () => copyToClipboard(entry.url, copyButton));
+    copyButton.addEventListener('click', () => {
+      copyToClipboard(entry.url, copyButton);
+    });
 
     row.appendChild(link);
     row.appendChild(copyButton);
@@ -137,8 +100,8 @@ async function loadUrls() {
   }
 
   const result = await chrome.runtime.sendMessage({ type: 'GET_URLS', tabId });
-  allEntries = normalizeEntries(result?.urls);
-  applyFilterAndRender();
+  const entries = normalizeEntries(result?.urls);
+  renderUrls(entries);
 }
 
 refreshBtn.addEventListener('click', () => {

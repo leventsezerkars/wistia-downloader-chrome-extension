@@ -8,7 +8,9 @@ function extractUrlsFromText(text) {
 
   return candidates.filter((candidate) => {
     const lower = candidate.toLowerCase();
-    return (lower.includes('wistia') || lower.includes('wi.st')) && lower.includes('m3u8');
+    const hasWistia = lower.includes('wistia') || lower.includes('wi.st');
+    const hasM3u8 = lower.includes('.m3u8') || lower.includes('m3u8');
+    return hasWistia && hasM3u8;
   });
 }
 
@@ -44,7 +46,7 @@ function parseJsonLdEntries() {
         }
       });
     } catch (error) {
-      // ignore parse failures
+      // ignore JSON-LD parse failures
     }
   });
 

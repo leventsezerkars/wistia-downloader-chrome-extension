@@ -27,11 +27,7 @@ function normalizeCandidate(rawUrl) {
     const looksLikeWistia = lowerHref.includes('wistia') || lowerHref.includes('wi.st');
     const looksLikeM3u8 = lowerHref.includes('.m3u8') || lowerHref.includes('m3u8');
 
-    if (looksLikeWistia && looksLikeM3u8) {
-      return href;
-    }
-
-    return null;
+    return looksLikeWistia && looksLikeM3u8 ? href : null;
   } catch (error) {
     return null;
   }
