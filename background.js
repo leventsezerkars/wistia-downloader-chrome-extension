@@ -97,6 +97,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     Promise.all(entries.map((entry) => addEntryToTab(tabId, entry?.url, entry?.title || ''))).then(() => {
       sendResponse({ ok: true });
     });
+
     return true;
   }
 
