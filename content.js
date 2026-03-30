@@ -14,10 +14,58 @@ function extractUrlsFromText(text) {
   });
 }
 
+function sanitizeTitle(rawTitle) {
+  if (!rawTitle || typeof rawTitle !== 'string') {
+    return '';
+  }
+
+  const title = rawTitle
+    .replace(/\s+/g, ' ')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim();
+
+  if (!title || title.length < 2) {
+    return '';
+  }
+
+  const lower = title.toLowerCase();
+  const ignored = [
+    'wistia',
+    'video',
+    'watch',
+    'player',
+    'homepage',
+    'home page',
+    'untitled',
+    'no title',
+    'default',
+    'index'
+  ];
+
+  if (ignored.includes(lower)) {
+    return '';
+  }
+
+  return title;
+}
+
 function getDocumentTitleFallback() {
-  const ogTitle = document.querySelector('meta[property="og:title"]')?.content;
-  const twitterTitle = document.querySelector('meta[name="twitter:title"]')?.content;
-  return (ogTitle || twitterTitle || document.title || '').trim();
+  const candidates = [
+    document.querySelector('meta[property="og:title"]')?.content,
+    document.querySelector('meta[name="twitter:title"]')?.content,
+    document.querySelector('meta[name="title"]')?.content,
+    document.querySelector('h1')?.textContent,
+    document.title
+  ];
+
+  for (const candidate of candidates) {
+    const title = sanitizeTitle(candidate || '');
+    if (title) {
+      return title;
+    }
+  }
+
+  return '';
 }
 
 function parseJsonLdEntries() {
@@ -39,11 +87,25 @@ function parseJsonLdEntries() {
           return;
         }
 
-        const url = item.contentUrl || item.url || '';
-        const title = item.name || item.headline || item.description || '';
-        if (url) {
-          entries.push({ url, title: String(title || '').trim() });
+        const directUrl = item.contentUrl || item.embedUrl || item.url || '';
+        const title = sanitizeTitle(item.name || item.headline || item.description || '');
+
+        if (directUrl) {
+          entries.push({ url: String(directUrl), title });
         }
+
+        const parts = [item.encoding, item.subjectOf, item.video, item.hasPart].flat().filter(Boolean);
+        parts.forEach((part) => {
+          if (!part || typeof part !== 'object') {
+            return;
+          }
+
+          const nestedUrl = part.contentUrl || part.embedUrl || part.url || '';
+          const nestedTitle = sanitizeTitle(part.name || part.headline || title || '');
+          if (nestedUrl) {
+            entries.push({ url: String(nestedUrl), title: nestedTitle });
+          }
+        });
       });
     } catch (error) {
       // ignore JSON-LD parse failures
@@ -53,25 +115,107 @@ function parseJsonLdEntries() {
   return entries;
 }
 
+function collectCandidateTitles() {
+  const selectors = [
+    'meta[property="og:title"]',
+    'meta[name="twitter:title"]',
+    'meta[name="title"]',
+    'h1',
+    '[data-testid*="title" i]',
+    '[class*="title" i]',
+    '[id*="title" i]',
+    '[class*="headline" i]',
+    '[id*="headline" i]',
+    '[aria-label*="title" i]'
+  ];
+
+  const titles = [];
+  const seen = new Set();
+
+  selectors.forEach((selector) => {
+    const nodes = Array.from(document.querySelectorAll(selector));
+    nodes.forEach((node) => {
+      const value = node.content || node.getAttribute('aria-label') || node.textContent || '';
+      const clean = sanitizeTitle(value);
+      if (!clean || seen.has(clean)) {
+        return;
+      }
+      seen.add(clean);
+      titles.push(clean);
+    });
+  });
+
+  return titles;
+}
+
 function inferTitleNearUrl(text, url, fallbackTitle) {
   const idx = text.indexOf(url);
   if (idx === -1) {
     return fallbackTitle;
   }
 
-  const chunk = text.slice(Math.max(0, idx - 260), Math.min(text.length, idx + url.length + 260));
+  const chunk = text.slice(Math.max(0, idx - 600), Math.min(text.length, idx + url.length + 600));
   const patterns = [
-    /"title"\s*:\s*"([^"]{2,160})"/i,
-    /"name"\s*:\s*"([^"]{2,160})"/i,
-    /data-title\s*=\s*"([^"]{2,160})"/i,
-    /aria-label\s*=\s*"([^"]{2,160})"/i
+    /"title"\s*:\s*"([^"]{2,220})"/i,
+    /"name"\s*:\s*"([^"]{2,220})"/i,
+    /"headline"\s*:\s*"([^"]{2,220})"/i,
+    /"videoTitle"\s*:\s*"([^"]{2,220})"/i,
+    /data-title\s*=\s*"([^"]{2,220})"/i,
+    /aria-label\s*=\s*"([^"]{2,220})"/i,
+    /title\s*=\s*"([^"]{2,220})"/i
   ];
 
   for (const pattern of patterns) {
     const match = chunk.match(pattern);
-    if (match?.[1]) {
-      return match[1].trim();
+    const clean = sanitizeTitle(match?.[1] || '');
+    if (clean) {
+      return clean;
     }
+  }
+
+  return fallbackTitle;
+}
+
+function inferTitleFromDomForUrl(url, fallbackTitle) {
+  try {
+    const parsed = new URL(url);
+    const urlTokens = [
+      parsed.pathname.split('/').filter(Boolean).pop(),
+      parsed.searchParams.get('videoFoamId'),
+      parsed.searchParams.get('media_id')
+    ]
+      .map((token) => String(token || '').trim())
+      .filter(Boolean);
+
+    for (const token of urlTokens) {
+      const escapedToken = CSS.escape(token);
+      const tokenNode =
+        document.querySelector(`[data-wistia-id="${escapedToken}"]`) ||
+        document.querySelector(`[data-video-id="${escapedToken}"]`) ||
+        document.querySelector(`[id*="${escapedToken}"]`) ||
+        document.querySelector(`[class*="${escapedToken}"]`);
+
+      if (!tokenNode) {
+        continue;
+      }
+
+      const candidates = [
+        tokenNode.getAttribute('data-title'),
+        tokenNode.getAttribute('aria-label'),
+        tokenNode.getAttribute('title'),
+        tokenNode.closest('article, section, div')?.querySelector('h1, h2, h3, [class*="title" i], [id*="title" i]')?.textContent,
+        tokenNode.textContent
+      ];
+
+      for (const candidate of candidates) {
+        const clean = sanitizeTitle(candidate || '');
+        if (clean) {
+          return clean;
+        }
+      }
+    }
+  } catch (error) {
+    // ignore malformed URL parsing
   }
 
   return fallbackTitle;
@@ -79,10 +223,14 @@ function inferTitleNearUrl(text, url, fallbackTitle) {
 
 function collectEntriesFromSourceText(fullText, fallbackTitle) {
   const urls = extractUrlsFromText(fullText);
-  return urls.map((url) => ({
-    url,
-    title: inferTitleNearUrl(fullText, url, fallbackTitle)
-  }));
+  return urls.map((url) => {
+    const byText = inferTitleNearUrl(fullText, url, fallbackTitle);
+    const byDom = inferTitleFromDomForUrl(url, byText);
+    return {
+      url,
+      title: sanitizeTitle(byDom || byText || fallbackTitle)
+    };
+  });
 }
 
 function collectPotentialSources() {
@@ -98,18 +246,23 @@ function collectPotentialSources() {
     }
   });
 
-  const mediaEls = Array.from(document.querySelectorAll('video, source'));
+  const mediaEls = Array.from(document.querySelectorAll('video, source, iframe'));
   mediaEls.forEach((mediaEl) => {
     const src = mediaEl.getAttribute('src') || mediaEl.currentSrc;
     if (src) {
       sourceParts.push(src);
+    }
+
+    const dataSrc = mediaEl.getAttribute('data-src') || mediaEl.getAttribute('data-url');
+    if (dataSrc) {
+      sourceParts.push(dataSrc);
     }
   });
 
   return sourceParts.join('\n');
 }
 
-function dedupeEntries(entries) {
+function dedupeEntries(entries, fallbackTitle) {
   const map = new Map();
 
   entries.forEach((entry) => {
@@ -118,9 +271,9 @@ function dedupeEntries(entries) {
       return;
     }
 
-    const title = (entry?.title || '').trim();
+    const title = sanitizeTitle(entry?.title || '');
     if (!map.has(url)) {
-      map.set(url, { url, title });
+      map.set(url, { url, title: title || fallbackTitle });
       return;
     }
 
@@ -131,14 +284,19 @@ function dedupeEntries(entries) {
     }
   });
 
-  return Array.from(map.values());
+  return Array.from(map.values()).map((entry) => ({
+    ...entry,
+    title: sanitizeTitle(entry.title || '') || fallbackTitle
+  }));
 }
 
 const fallbackTitle = getDocumentTitleFallback();
+const candidateTitles = collectCandidateTitles();
+const bestFallback = sanitizeTitle(candidateTitles[0] || fallbackTitle);
 const sourceText = collectPotentialSources();
-const byText = collectEntriesFromSourceText(sourceText, fallbackTitle);
+const byText = collectEntriesFromSourceText(sourceText, bestFallback);
 const byJsonLd = parseJsonLdEntries();
-const foundEntries = dedupeEntries([...byText, ...byJsonLd]);
+const foundEntries = dedupeEntries([...byText, ...byJsonLd], bestFallback);
 
 if (foundEntries.length) {
   chrome.runtime.sendMessage({
