@@ -35,11 +35,48 @@ function normalizeEntries(rawUrls) {
     .filter((item) => item && item.url);
 }
 
+function filterEntries() {
+  const query = searchInput.value.trim().toLowerCase();
+  if (!query) {
+    return allEntries;
+  }
+
+  return allEntries.filter((entry) => {
+    return entry.url.toLowerCase().includes(query) || entry.title.toLowerCase().includes(query);
+  });
+}
+
 function updateCountBadge(count) {
   countBadge.textContent = `${count} URL`;
 }
 
-  if (!entries.length) {
+function createEmptyRow(text) {
+  const row = document.createElement('li');
+  row.className = 'empty-state';
+  row.textContent = text;
+  return row;
+}
+
+async function copyToClipboard(text, button) {
+  try {
+    await navigator.clipboard.writeText(text);
+    const original = button.textContent;
+    button.textContent = 'Kopyalandı';
+    button.disabled = true;
+    setTimeout(() => {
+      button.textContent = original;
+      button.disabled = false;
+    }, 900);
+  } catch (error) {
+    statusEl.textContent = 'Kopyalama başarısız oldu. URL\'yi manuel kopyalayın.';
+  }
+}
+
+function renderEntries(entries, totalCount = entries.length) {
+  urlListEl.innerHTML = '';
+  updateCountBadge(totalCount);
+
+  if (!totalCount) {
     statusEl.textContent = 'Wistia m3u8 URL bulunamadı.';
     urlListEl.appendChild(createEmptyRow('Henüz bağlantı bulunamadı. Sayfayı yenileyip tekrar deneyin.'));
     return;
@@ -50,6 +87,8 @@ function updateCountBadge(count) {
     urlListEl.appendChild(createEmptyRow('Filtreye uyan kayıt yok. Aramayı temizleyin.'));
     return;
   }
+
+  statusEl.textContent = `${entries.length} sonuç gösteriliyor.`;
 
   entries.forEach((entry) => {
     const item = document.createElement('li');
@@ -100,8 +139,8 @@ async function loadUrls() {
   }
 
   const result = await chrome.runtime.sendMessage({ type: 'GET_URLS', tabId });
-  const entries = normalizeEntries(result?.urls);
-  renderUrls(entries);
+  allEntries = normalizeEntries(result?.urls);
+  applyFilterAndRender();
 }
 
 refreshBtn.addEventListener('click', () => {
